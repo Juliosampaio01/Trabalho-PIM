@@ -936,9 +936,17 @@
 
                 const dados = await resposta.json();
 
-                showToast(dados.mensagem, 'success');
+                if (dados.success) {
 
-                this.reset();
+    showToast(dados.mensagem, 'success');
+
+    this.reset();
+
+} else {
+
+    showToast(dados.mensagem, 'error');
+
+}
 
             } catch (erro) {
 
