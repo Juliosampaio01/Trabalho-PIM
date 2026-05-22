@@ -12,9 +12,10 @@ CORS(app)
 conexao = mysql.connector.connect(
     host="mysql-129bdf86-trabalho-pim.b.aivencloud.com",
     user="avnadmin",
-    password="AVNS_iHy3Dyy2mnbvL3RF6Q_",
+    password="AVNS_iHy3Dyy2mnbvL3rF6Q_",
     database="defaultdb",
-    port=12828
+    port=12828,
+    ssl_disabled=False
 )
 
 # Criar a tabela automaticamente na nuvem se ela não existir
