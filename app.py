@@ -7,16 +7,35 @@ app = Flask(__name__)
 CORS(app)
 
 # ==========================================
-# ⚠️ BANCO DE DADOS LOCAL DESATIVADO PARA O RENDER
-# Quando você criar o banco online (no Railway/Aiven), 
-# basta trocar os dados abaixo e tirar os '#' do início das linhas.
+# 🗄️ BANCO DE DADOS ONLINE (AIVEN) CONFIGURADO!
 # ==========================================
-# conexao = mysql.connector.connect(
-#     host="localhost",
-#     user="root",
-#     password="Ju20112006",
-#     database="saudeplus"
-# )
+conexao = mysql.connector.connect(
+    host="mysql-129bdf86-trabalho-pim.b.aivencloud.com",
+    user="avnadmin",
+    password="AVNS_iHy3Dyy2mnbvL3RF6Q_",
+    database="defaultdb",
+    port=12828
+)
+
+# Criar a tabela automaticamente na nuvem se ela não existir
+try:
+    cursor = conexao.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nome VARCHAR(100) NOT NULL,
+            email VARCHAR(100) NOT NULL UNIQUE,
+            telefone VARCHAR(20),
+            plano VARCHAR(50),
+            senha VARCHAR(255) NOT NULL
+        );
+    """)
+    conexao.commit()
+    cursor.close()
+    print("Tabela 'usuarios' verificada/criada com sucesso no Aiven!")
+except Exception as e:
+    print(f"Erro ao inicializar a tabela: {e}")
+
 
 @app.route("/")
 def home():
@@ -26,45 +45,46 @@ def home():
 def cadastro():
     dados = request.json
     
-    # Comentado temporariamente para o Render não dar erro de banco vazio
-    """
-    cursor = conexao.cursor()
-    sql = "INSERT INTO usuarios (nome, email, telefone, plano, senha) VALUES (%s, %s, %s, %s, %s)"
-    valores = (dados["nome"], dados["email"], dados["telefone"], dados["plano"], dados["senha"])
-    cursor.execute(sql, valores)
-    conexao.commit()
-    """
-
-    return jsonify({
-        "mensagem": "Rota de cadastro acessada! (Aguardando banco de dados online)"
-    })
+    try:
+        cursor = conexao.cursor()
+        sql = "INSERT INTO usuarios (nome, email, telefone, plano, senha) VALUES (%s, %s, %s, %s, %s)"
+        valores = (dados["nome"], dados["email"], dados["telefone"], dados["plano"], dados["senha"])
+        cursor.execute(sql, valores)
+        conexao.commit()
+        cursor.close()
+        
+        return jsonify({
+            "success": True,
+            "mensagem": "Usuário cadastrado com sucesso no banco online!"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "mensagem": f"Erro ao cadastrar no banco: {str(e)}"
+        }), 500
 
 @app.route("/login", methods=["POST"])
 def login():
     dados = request.json
     
-    # Comentado temporariamente para o Render não dar erro de banco vazio
-    """
-    cursor = conexao.cursor(dictionary=True)
-    sql = "SELECT * FROM usuarios WHERE email = %s AND senha = %s"
-    valores = (dados["email"], dados["senha"])
-    cursor.execute(sql, valores)
-    usuario = cursor.fetchone()
-    if usuario:
-        return jsonify({"success": True, "usuario": usuario})
-    """
-
-    # Simulação temporária para testes enquanto o banco está offline
-    if dados.get("email") == "teste@email.com" and dados.get("senha") == "123":
+    try:
+        cursor = conexao.cursor(dictionary=True)
+        sql = "SELECT * FROM usuarios WHERE email = %s AND senha = %s"
+        valores = (dados["email"], dados["senha"])
+        cursor.execute(sql, valores)
+        usuario = cursor.fetchone()
+        cursor.close()
+        
+        if usuario:
+            return jsonify({"success": True, "usuario": usuario})
+        else:
+            return jsonify({"success": False, "mensagem": "E-mail ou senha incorretos."})
+            
+    except Exception as e:
         return jsonify({
-            "success": True, 
-            "usuario": {"nome": "Usuário Teste", "email": "teste@email.com"}
-        })
-
-    return jsonify({
-        "success": False,
-        "mensagem": "E-mail ou senha incorretos (ou banco offline)"
-    })
+            "success": False,
+            "mensagem": f"Erro ao conectar ao banco de dados: {str(e)}"
+        }), 500
 
 # Configuração essencial para o Render conseguir definir a porta do servidor
 if __name__ == "__main__":
